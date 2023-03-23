@@ -1,0 +1,87 @@
+service: lambdaExample
+frameworkVersion: "3"
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - "dynamodb:*"
+          Resource:
+            - { "Fn::GetAtt": ["UserTable", "Arn"] }
+
+plugins:
+  - serverless-iam-roles-per-function
+
+functions:
+  api:
+    handler: src/index.handler
+    events:
+      - http:
+          path: /
+          method: get
+  addUser:
+    handler: src/addUser.addUser
+    events:
+      - http:
+          path: /users
+          method: post
+          cors: true
+  getUsers:
+    handler: src/getUsers.handler
+    events:
+      - http:
+          cors: true
+          path: /users
+          method: get
+  deleteUser:
+    handler: src/deleteUser.handler
+    events:
+      - http:
+          path: /users/{id}
+          method: delete
+          cors: true
+  postUrl:
+    handler: src/uploadfile.handler
+    events:
+      - http:
+          path: /postUrl/{filename}
+          method: get
+          cors: true
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - s3:*
+        Resource:
+          - arn:aws:s3:::ecys-users-bucket/*
+
+resources:
+  Resources:
+    UserTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        TableName: User
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+    UsersBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ecys-users-bucket
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - "*"
+              AllowedMethods:
+                - GET
+                - PUT
+                - HEAD
+              AllowedOrigins:
+                - "*"
